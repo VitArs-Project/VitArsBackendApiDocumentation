@@ -1,0 +1,115 @@
+openapi: 3.0.2
+info:
+  title: "API Gateway + Service discovery"
+  version: 1.1.1
+paths:
+  /gateway/publish:
+    post:
+      tags:
+        - "API"
+      summary: "Публикация"
+      description: "Экземпляр сервиса публикует свое API. API должно быть однозначно, если есть два запроса с одинаковыми путями, но с различными http методами, их следует передать как один. Сразу после этого, экземпляр считается неактивным и на него не перенаправляются запросы."
+      requestBody:
+        description: "В качестве поля address может выступать как ip, так и доменное имя."
+        required: true
+        content:
+          application/json:
+            schema:
+              type: "object"
+              properties:
+                address:
+                  type: "string"
+                  example: "http://192.168.1.50"
+                port:
+                  type: "string"
+                  example: "8080"
+                name_service:
+                  type: "string"
+                  example: "CONTENT MANAGEMENT"
+                version_service:
+                  type: "string"
+                  example: "0.1.0beta"
+                api:
+                  type: "array"
+                  items:
+                    type: "object"
+                    properties:
+                      path:
+                        type: "string"
+                      api_version:
+                        type: "string"
+                  example:
+                    - path: "/collections/posts/{postID}/token/{token}"
+                      api_version: "v1"
+                    - path: "/collections/posts"
+                      api_version: "v1"
+      responses:
+        200:
+          description: "OK. Экземпляр сервиса получае свой id и интервал, с которым он должен пинговать данный микросервис."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  instance_id:
+                    type: "string"
+                    example: "5f9973dc-bdb3-4814-b64d-03a2d7a4b26e"
+                  ping_interval:
+                    type: "integer"
+                    example: 10000
+        400:
+          description: "Eсли есть неоднозначность в API или в адресе уже зарегистрированных сервисов."
+  /gateway/ready/{instance_id}:
+    get:
+      tags:
+        - "API"
+      summary: "Готовность"
+      description: "Экземпляр сервиса сообщает о готовности принимать запросы."
+      parameters:
+        - name: "instance_id"
+          in: "path"
+          description: "ID экземпляра сервиса выданный при публикации API."
+          required: true
+          schema:
+            type: "string"
+      responses:
+        200:
+          description: "Oк, если экземпляр с таким ID опубликовал API."
+        403:
+          description: "Экземпляр с таким ID не опубликовал API."
+  /gateway/ping/{instance_id}:
+    get:
+      tags:
+        - "API"
+      summary: "Heartbeat"
+      description: "Экземпляр сервиса сообщает о том, что он функционирует."
+      parameters:
+        - name: "instance_id"
+          in: "path"
+          description: "ID экземпляра сервиса выданный при публикации API."
+          required: true
+          schema:
+            type: "string"
+      responses:
+        200:
+          description: "Oк, если экземпляр с таким ID опубликовал API."
+        403:
+          description: "Экземпляр с таким ID не опубликовал API."
+  /gateway/unpublish/{instance_id}:
+    get:
+      tags:
+        - "API"
+      summary: "Отключение"
+      description: "Отключить экземпляр сервиса от шлюза. На него больше не будут перенаправляться запросы и от него не будет требоваться пинг."
+      parameters:
+        - name: "instance_id"
+          in: "path"
+          description: "ID экземпляра сервиса, выданный при публикации API."
+          required: true
+          schema:
+            type: "string"
+      responses:
+        200:
+          description: "Oк, если экземпляр с таким ID опубликовал API."
+        403:
+          description: "Экземпляр с таким ID не опубликовал API."
